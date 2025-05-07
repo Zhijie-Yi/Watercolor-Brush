@@ -1,142 +1,113 @@
-let circleSize = 200;
-let circleSeparation = 100;
-let strokeWidth = 20;
-let bgColor = '#ffffff';
-
-let circleColors = ['#2143bd', '#00c2ff', '#00d079'];
-
-let angle1 = 0;
-let angle2 = 0;
-let angle3 = 0;
-let direction = 1;
-
+let objs = [];
+const noiseScale = 0.01;
 let gui;
-let params;
-
-let textOverlay;
-let showCopyright = true;
+let settings = {
+  minDiameter: 5,
+  maxDiameter: 30,
+  minLife: 20,
+  maxLife: 50,
+  step: 0.3,
+  color1: "#ACDEED",
+  color2: "#EAD5E8",
+  color3: "#84C0E7",
+  color4: "#384399",
+  bgColor: "#F5F4FD",
+  saveImage: function () {
+    saveCanvas("particle_art", "png");
+  },
+};
 
 function setup() {
-  createCanvas(windowWidth, windowHeight, WEBGL);
-
-  // 创建 2D 图层，用于绘制版权信息
-  textOverlay = createGraphics(windowWidth, windowHeight);
-  textOverlay.textSize(12);
-  textOverlay.textAlign(RIGHT, BOTTOM);
-  textOverlay.fill(0);
-  textOverlay.noStroke();
-
-  // dat.GUI 参数对象
-  params = {
-    CircleSize: 200,
-    Separation: 100,
-    StrokeWidth: 20,
-    BackgroundColor: '#ffffff',
-    Circle1Color: '#2143bd',
-    Circle2Color: '#00c2ff',
-    Circle3Color: '#00d079',
-    SaveImage: function () {
-      // 保存图像时隐藏版权
-      copyright(false);
-      // 延时确保文字被清除
-      setTimeout(() => {
-        saveCanvas('myDesign', 'png');
-        // 恢复版权显示
-        copyright(true);
-      }, 200);
-    }
-  };
+  createCanvas(windowWidth, windowHeight);
+  angleMode(DEGREES);
+  noStroke();
+  background(settings.bgColor);
 
   gui = new dat.GUI();
-  gui.add(params, 'CircleSize', 100, 800).onChange(v => circleSize = v);
-  gui.add(params, 'Separation', 0, 200).onChange(v => circleSeparation = v);
-  gui.add(params, 'StrokeWidth', 4, 36).onChange(v => strokeWidth = v);
-  gui.addColor(params, 'BackgroundColor').onChange(v => bgColor = v);
-  gui.addColor(params, 'Circle1Color').onChange(v => circleColors[0] = v);
-  gui.addColor(params, 'Circle2Color').onChange(v => circleColors[1] = v);
-  gui.addColor(params, 'Circle3Color').onChange(v => circleColors[2] = v);
-  gui.add(params, 'SaveImage');
+  gui.add(settings, "minDiameter", 1, 30).name("最小半径");
+  gui.add(settings, "maxDiameter", 10, 100).name("最大半径");
+  gui.add(settings, "minLife", 5, 50).name("最小寿命");
+  gui.add(settings, "maxLife", 10, 100).name("最大寿命");
+  gui.add(settings, "step", 0.1, 1).step(0.05).name("生命周期步长");
+  gui.addColor(settings, "color1").name("颜色1");
+  gui.addColor(settings, "color2").name("颜色2");
+  gui.addColor(settings, "color3").name("颜色3");
+  gui.addColor(settings, "color4").name("颜色4");
+  gui.addColor(settings, "bgColor").name("背景颜色").onChange(() => {
+    background(settings.bgColor);
+  });
+  gui.add(settings, "saveImage").name("保存图像");
 }
 
 function draw() {
-  background(bgColor);
-
-  angle1 += 0.03 * direction;
-  angle2 += 0.05 * direction;
-  angle3 += 0.02 * direction;
-
-  // 第一个圆环
-  push();
-  translate(-circleSeparation, 0, 0);
-  rotateZ(frameCount * 0.05);
-  rotateY(frameCount * 0.03);
-  strokeWeight(strokeWidth);
-  stroke(circleColors[0]);
-  noFill();
-  beginShape();
-  for (let a = 0; a <= angle1; a += 0.05) {
-    let x = cos(a) * (circleSize * 0.7 / 2);
-    let y = sin(a) * (circleSize / 2);
-    vertex(x, y);
-  }
-  endShape();
-  pop();
-
-  // 第二个圆环
-  push();
-  rotateY(frameCount * 0.05);
-  rotateX(frameCount * 0.03);
-  strokeWeight(strokeWidth);
-  stroke(circleColors[1]);
-  noFill();
-  beginShape();
-  for (let a = 0; a <= angle2; a += 0.05) {
-    let x = cos(a) * (circleSize * 0.7 / 2);
-    let y = sin(a) * (circleSize / 2);
-    vertex(x, y);
-  }
-  endShape();
-  pop();
-
-  // 第三个圆环
-  push();
-  translate(circleSeparation, 0, 0);
-  rotateX(frameCount * 0.05);
-  rotateZ(frameCount * 0.03);
-  strokeWeight(strokeWidth);
-  stroke(circleColors[2]);
-  noFill();
-  beginShape();
-  for (let a = 0; a <= angle3; a += 0.05) {
-    let x = cos(a) * (circleSize / 2);
-    let y = sin(a) * (circleSize * 0.7 / 2);
-    vertex(x, y);
-  }
-  endShape();
-  pop();
-
-  // 旋转角度控制
-  if (angle1 >= TWO_PI && angle2 >= TWO_PI && angle3 >= TWO_PI) {
-    direction = -1;
-  }
-  if (angle1 <= 0 && angle2 <= 0 && angle3 <= 0) {
-    direction = 1;
+  if (mouseIsPressed) {
+    let x = mouseX;
+    let y = mouseY;
+    objs.push(new Obj(x, y));
   }
 
-  // 绘制版权信息
-  if (showCopyright) {
-    textOverlay.clear();
-    textOverlay.text(
-      "Created by @Zhijie-Yi @LuANyxxx\n©️ All my products are available for personal and commercial projects",
-      textOverlay.width - 10,
-      textOverlay.height - 10
-    );
-    resetMatrix(); // 重置坐标
-    image(textOverlay, -width / 2, -height / 2);
+  for (let i = 0; i < objs.length; i++) {
+    objs[i].move();
+    objs[i].display();
   }
+
+  for (let j = objs.length - 1; j >= 0; j--) {
+    if (objs[j].isFinished()) {
+      objs.splice(j, 1);
+    }
+  }
+
+  // 版权信息
+  fill(0);
+  noStroke();
+  textSize(12);
+  textAlign(RIGHT, BOTTOM);
+  text(
+    "Created by @Zhijie-Yi @LuANyxxx\n©️All my products are available for personal and commercial projects",
+    width - 10,
+    height - 10
+  );
 }
 
-// 控制是否显示版权信息
-function copyright(show) {
-  showCopyright = show;
+class Obj {
+  constructor(ox, oy) {
+    this.pos = createVector(ox, oy);
+    this.vel = createVector(0, 0);
+    this.t = random(0, noiseScale);
+    this.lifeMax = random(settings.minLife, settings.maxLife);
+    this.life = this.lifeMax;
+    this.step = settings.step;
+    this.dMax = random(settings.minDiameter, settings.maxDiameter);
+    this.d = this.dMax;
+
+    // 随机选择四种颜色中的一种
+    let colorIndex = floor(random(4));
+    if (colorIndex === 0) {
+      this.c = color(settings.color1 + "88"); // 加透明度
+    } else if (colorIndex === 1) {
+      this.c = color(settings.color2 + "88"); // 加透明度
+    } else if (colorIndex === 2) {
+      this.c = color(settings.color3 + "88"); // 加透明度
+    } else {
+      this.c = color(settings.color4 + "88"); // 加透明度
+    }
+  }
+
+  move() {
+    let theta = map(noise(this.pos.x * noiseScale, this.pos.y * noiseScale, this.t), 0, 1, -360, 360);
+    this.vel.x = cos(theta);
+    this.vel.y = sin(theta);
+    this.pos.add(this.vel);
+  }
+
+  isFinished() {
+    this.life -= this.step;
+    this.d = map(this.life, 0, this.lifeMax, 0, this.dMax);
+    return this.life < 0;
+  }
+
+  display() {
+    fill(this.c);
+    circle(this.pos.x, this.pos.y, this.d);
+  }
 }
